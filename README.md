@@ -7,6 +7,10 @@ frpui is a thin SwiftUI shell that lives in the menu bar and manages the bundled
 and have it launch at login. The actual tunneling is done entirely by `frpc` from
 the upstream [fatedier/frp](https://github.com/fatedier/frp) project.
 
+<p align="center">
+  <img src="screenshots/screenshot.png" alt="frpui Settings window" width="420">
+</p>
+
 ## Features
 
 - **Menu bar only** — no Dock icon (`LSUIElement`). A single status item with a small menu.
