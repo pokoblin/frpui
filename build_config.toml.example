@@ -1,0 +1,22 @@
+# build_config.toml — local build & code-signing configuration
+#
+# Setup (after cloning the repo):
+#     cp build_config.toml.example build_config.toml
+# then edit build_config.toml with your own values. The real build_config.toml
+# is git-ignored so your signing details are never committed.
+#
+# List the signing identities available in your keychain with:
+#     security find-identity -v -p codesigning
+# Copy the full name shown in quotes into `signing_identity` below, e.g.
+#     "Apple Development: you@example.com (XXXXXXXXXX)"
+#     "Developer ID Application: Your Name (TEAMID1234)"
+# You may also use the certificate's SHA-1 hash instead of the name.
+
+# Required: code-signing certificate (common name or SHA-1 hash).
+signing_identity = "Apple Development: you@example.com (XXXXXXXXXX)"
+
+# Optional: Apple Developer Team ID (10 characters). Leave "" if not needed.
+team_id = ""
+
+# Optional: build configuration, "Release" or "Debug" (default: Release).
+configuration = "Release"
