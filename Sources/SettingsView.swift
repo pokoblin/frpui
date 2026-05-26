@@ -30,26 +30,6 @@ struct SettingsView: View {
             }
         }
         .frame(width: 500)
-        .background(WindowActivator())
-        .onAppear { NSApp.activate(ignoringOtherApps: true) }
-    }
-}
-
-/// Brings the app to the front and focuses the settings window when it attaches,
-/// needed because an LSUIElement (menu bar) app does not auto-activate on open.
-private struct WindowActivator: NSViewRepresentable {
-    func makeNSView(context: Context) -> NSView { ActivatingView() }
-    func updateNSView(_ nsView: NSView, context: Context) {}
-
-    private final class ActivatingView: NSView {
-        override func viewDidMoveToWindow() {
-            super.viewDidMoveToWindow()
-            guard let window else { return }
-            DispatchQueue.main.async {
-                NSApp.activate(ignoringOtherApps: true)
-                window.makeKeyAndOrderFront(nil)
-            }
-        }
     }
 }
 
@@ -69,7 +49,13 @@ struct GeneralSettingsTab: View {
                 .pickerStyle(.menu)
 
                 Toggle("Start service on launch", isOn: $appState.autoStartService)
-                Toggle("Launch at login", isOn: $appState.launchAtLogin)
+
+                Picker("Launch at startup", selection: $appState.launchMode) {
+                    ForEach(LaunchMode.allCases) { mode in
+                        Text(mode.title).tag(mode)
+                    }
+                }
+                .pickerStyle(.menu)
             }
 
             Section("Configuration (frpc.toml)") {
@@ -93,7 +79,11 @@ struct GeneralSettingsTab: View {
                         .keyboardShortcut("s", modifiers: .command)
                 }
 
-                if appState.isActive {
+                if appState.launchMode == .systemDaemon {
+                    Text("Saving updates the system service configuration (requires authorization) and restarts it.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                } else if appState.isActive {
                     Text("The service is running. Changes take effect after you stop and start it again.")
                         .font(.caption)
                         .foregroundStyle(.secondary)
@@ -107,7 +97,10 @@ struct GeneralSettingsTab: View {
     private func save() {
         do {
             try ConfigStore.write(configText)
-            statusNote = "Saved."
+            appState.syncSystemConfigIfNeeded()
+            statusNote = appState.launchMode == .systemDaemon
+                ? "Saved and applied to the system service."
+                : "Saved."
         } catch {
             statusNote = "Save failed: \(error.localizedDescription)"
         }
@@ -144,9 +137,14 @@ struct LogTab: View {
             )
 
             HStack {
+                if appState.launchMode == .systemDaemon {
+                    Text("System daemon log (/Library/Logs/frpui-frpc.log)")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Spacer()
                 Button("Clear") { appState.clearLog() }
-                    .disabled(appState.log.isEmpty)
+                    .disabled(appState.log.isEmpty || appState.launchMode == .systemDaemon)
             }
         }
         .padding()

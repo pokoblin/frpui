@@ -7,16 +7,15 @@ struct frpuiApp: App {
     @StateObject private var appState = AppState.shared
 
     var body: some Scene {
-        MenuBarExtra("frpui", systemImage: appState.serviceState == .stopped ? "personalhotspot.slash" : "personalhotspot") {
+        MenuBarExtra("frpui", systemImage: menuBarSymbol) {
             MenuContent()
                 .environmentObject(appState)
         }
         .menuBarExtraStyle(.menu)
+    }
 
-        Settings {
-            SettingsView()
-                .environmentObject(appState)
-        }
+    private var menuBarSymbol: String {
+        appState.serviceState == .stopped ? "personalhotspot.slash" : "personalhotspot"
     }
 }
 
@@ -34,14 +33,25 @@ struct MenuContent: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        Button(action: { appState.toggleRunning() }) {
-            startServiceLabel
+        Text("frpui v\(appVersion)")
+
+        Divider()
+
+        if appState.launchMode == .systemDaemon {
+            Button(action: {}) {
+                systemStatusLabel
+            }
+            .disabled(true)
+        } else {
+            Button(action: { appState.toggleRunning() }) {
+                startServiceLabel
+            }
         }
 
         Divider()
 
-        SettingsLink {
-            Text("Settings…")
+        Button("Settings…") {
+            SettingsWindowController.shared.show()
         }
         .keyboardShortcut(",", modifiers: .command)
 
@@ -53,12 +63,25 @@ struct MenuContent: View {
         .keyboardShortcut("q", modifiers: .command)
     }
 
+    private var appVersion: String {
+        Bundle.main.infoDictionary?["CFBundleShortVersionString"] as? String ?? "?"
+    }
+
     private var startServiceLabel: Text {
         let dot = Text("  ●").font(.system(size: 10))
         switch appState.serviceState {
         case .stopped: return Text("Start Service")
         case .starting: return Text("Starting Service") + dot.foregroundColor(.yellow)
         case .running: return Text("Stop Service") + dot.foregroundColor(.green)
+        }
+    }
+
+    private var systemStatusLabel: Text {
+        let dot = Text("  ●").font(.system(size: 10))
+        switch appState.serviceState {
+        case .stopped: return Text("System service: stopped")
+        case .starting: return Text("System service: starting") + dot.foregroundColor(.yellow)
+        case .running: return Text("System service: running") + dot.foregroundColor(.green)
         }
     }
 }

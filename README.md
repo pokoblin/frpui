@@ -19,7 +19,8 @@ the upstream [fatedier/frp](https://github.com/fatedier/frp) project.
 - **Settings**
   - **Appearance** — System (default) / Light / Dark.
   - **Start service on launch** — auto-start the tunnel when the app opens.
-  - **Launch at login** — register the app as a login item via `SMAppService`.
+  - **Launch at startup** — Off / at login (current user) / at startup (system daemon).
+    See [Launch at startup](#launch-at-startup) below.
   - **Configuration editor** — edit `frpc.toml` directly from the app.
   - **Log tab** — read-only live output from `frpc`.
 - **Quit** — also stops the `frpc` process.
@@ -27,6 +28,37 @@ the upstream [fatedier/frp](https://github.com/fatedier/frp) project.
 The editable configuration lives at
 `~/Library/Application Support/frpui/frpc.toml`. On first run it is seeded from the
 bundled `cli/frpc.toml`, and `frpc` is launched with `-c` pointing at this copy.
+
+## Launch at startup
+
+The **Launch at startup** dropdown in Settings has three modes (default: **Off**):
+
+| Mode | What happens | Runs before login? |
+| --- | --- | --- |
+| **Off** | Nothing is auto-started. | — |
+| **At login (current user)** | The app is registered as a per-user login item (`SMAppService.mainApp`). The menu bar app launches after you log in; the tunnel then starts according to *Start service on launch*. | No |
+| **At startup (system, requires authorization)** | A system `LaunchDaemon` (`SMAppService.daemon`) runs `frpc` as root as soon as the disk is unlocked, independently of any GUI login. | Yes |
+
+### System daemon prerequisites
+
+The system mode runs `frpc` before any user logs in, so it has a few extra requirements:
+
+- **Signed build required.** Registering a daemon is rejected for ad-hoc/development
+  builds. Use a properly signed app produced by [`./build.sh`](#signed-release-build)
+  (e.g. with a Developer ID certificate), and ideally move `frpui.app` to `/Applications`.
+  Don't move or delete the `.app` after registering — the daemon's executable path is
+  relative to the app bundle.
+- **One-time approval.** When you pick this mode, frpui opens
+  **System Settings ▸ General ▸ Login Items** — enable frpui there to finish activating
+  the daemon.
+- **Separate, root-readable config.** A daemon running before login cannot read your
+  (possibly FileVault-encrypted) home folder, so the system mode uses
+  `/Library/Application Support/frpui/frpc.toml`. frpui mirrors your config there when you
+  switch to system mode or press **Save** while in it — this asks for your administrator
+  password and restarts the daemon.
+- **Manual control is disabled.** While in system mode the daemon owns `frpc` (always-on),
+  so the menu's *Start/Stop Service* item is disabled. To stop the service, set the mode
+  back to **Off**.
 
 ## Requirements
 

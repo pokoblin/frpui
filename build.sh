@@ -54,6 +54,15 @@ if [ ! -f "$ROOT/cli/frpc" ]; then
   exit 1
 fi
 
+VERSION_FILE="$ROOT/VERSION"
+[ -f "$VERSION_FILE" ] || echo "1.0.1" > "$VERSION_FILE"
+VERSION="$(tr -d ' \t\r\n' < "$VERSION_FILE")"
+if ! printf '%s' "$VERSION" | grep -qE '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+  echo "error: VERSION must look like 1.0.1 (found: '$VERSION')" >&2
+  exit 1
+fi
+
+echo "==> Version          : $VERSION"
 echo "==> Signing identity : $SIGNING_IDENTITY"
 [ -n "$TEAM_ID" ] && echo "==> Team ID          : $TEAM_ID"
 echo "==> Configuration    : $CONFIGURATION"
@@ -74,6 +83,7 @@ xcode_args=(
   -derivedDataPath build
   CODE_SIGN_STYLE=Manual
   CODE_SIGN_IDENTITY="$SIGNING_IDENTITY"
+  MARKETING_VERSION="$VERSION"
 )
 [ -n "$TEAM_ID" ] && xcode_args+=( DEVELOPMENT_TEAM="$TEAM_ID" )
 
@@ -100,6 +110,12 @@ rm -rf "$DIST/frpui.app"
 ditto "$APP" "$DIST/frpui.app"   # ditto preserves the code signature and xattrs
 
 echo ""
-echo "Build complete:"
+echo "Build complete (v$VERSION):"
 echo "  $DIST/frpui.app"
 echo "Open it with: open \"$DIST/frpui.app\""
+
+# Bump the patch version for next time (only reached on a fully successful build).
+MAJOR="${VERSION%%.*}"; REST="${VERSION#*.}"; MINOR="${REST%%.*}"; PATCH="${REST##*.}"
+NEXT="$MAJOR.$MINOR.$((PATCH + 1))"
+printf '%s\n' "$NEXT" > "$VERSION_FILE"
+echo "==> Version bumped to $NEXT for the next build."
